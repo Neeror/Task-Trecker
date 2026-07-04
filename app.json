@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Task Tracker",
+    "slug": "task-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "tasktracker",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.myroslav.tasktracker"
+    },
+    "android": {
+      "package": "com.myroslav.tasktracker",
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F1115"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1ff9ae1f-b707-4475-80fe-69c9aceeb14e"
+      }
+    }
+  }
+}
