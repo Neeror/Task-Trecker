@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 const DB_NAME = 'tasktracker.db';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -47,6 +47,23 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks (date);
         CREATE INDEX IF NOT EXISTS idx_tasks_goal_id ON tasks (goal_id);
         CREATE INDEX IF NOT EXISTS idx_goals_period ON goals (period, period_key);
+      `);
+    }
+     if (currentVersion < 2) {
+      await tx.execAsync(`
+        ALTER TABLE goals ADD COLUMN manual_percent INTEGER
+          CHECK (manual_percent IS NULL OR manual_percent BETWEEN 0 AND 100);
+
+        CREATE TABLE IF NOT EXISTS goal_steps (
+          id TEXT PRIMARY KEY NOT NULL,
+          goal_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1)),
+          created_at INTEGER NOT NULL,
+          FOREIGN KEY (goal_id) REFERENCES goals (id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_goal_steps_goal_id ON goal_steps (goal_id);
       `);
     }
     await tx.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);

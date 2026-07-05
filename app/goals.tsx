@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { GoalDetailModal } from '@/components/GoalDetailModal';
 import { currentMonthKey, currentYearKey } from '@/logic/dates';
 import { createGoal, deleteGoal, getAllGoals } from '@/storage/goalsRepo';
 import { colors, radius, spacing, typography } from '@/theme/colors';
@@ -20,6 +21,7 @@ export default function GoalsScreen() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
   const [period, setPeriod] = useState<GoalPeriod>('month');
@@ -29,9 +31,12 @@ export default function GoalsScreen() {
 
   const refresh = useCallback(async () => {
     try {
-      const all = await getAllGoals();
+        const all = await getAllGoals();
       if (mountedRef.current) {
         setGoals(all);
+        setSelectedGoal((prev) =>
+          prev ? (all.find((g) => g.id === prev.id) ?? prev) : prev,
+        );
         setLoadError(null);
       }
     } catch (e) {
@@ -115,12 +120,14 @@ export default function GoalsScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable
+            <Pressable
             style={styles.goalRow}
+            onPress={() => setSelectedGoal(item)}
             onLongPress={() => confirmDelete(item)}
             delayLongPress={400}
+            accessibilityRole="button"
             accessibilityLabel={item.title}
-            accessibilityHint="Утримуйте, щоб видалити."
+            accessibilityHint="Натисніть, щоб відкрити деталі. Утримуйте, щоб видалити."
           >
             <View style={styles.goalInfo}>
               <Text style={styles.goalTitle} numberOfLines={2}>
@@ -129,13 +136,17 @@ export default function GoalsScreen() {
               <Text style={styles.goalMeta}>
                 {item.period === 'month' ? 'Місяць' : 'Рік'} · {item.periodKey} ·
                 план: {item.targetCount}
+                {item.manualPercent !== null
+                  ? ` · вручну: ${item.manualPercent}%`
+                  : ''}
               </Text>
             </View>
+            <Text style={styles.goalChevron}>›</Text>
           </Pressable>
         )}
       />
 
-      <Pressable
+     <Pressable
         style={styles.fab}
         onPress={() => setModalVisible(true)}
         accessibilityRole="button"
@@ -143,6 +154,13 @@ export default function GoalsScreen() {
       >
         <Text style={styles.fabText}>＋</Text>
       </Pressable>
+
+      <GoalDetailModal
+        goal={selectedGoal}
+        visible={selectedGoal !== null}
+        onClose={() => setSelectedGoal(null)}
+        onChanged={() => void refresh()}
+      />
 
       <Modal
         visible={modalVisible}
@@ -250,6 +268,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   goalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.md,
@@ -260,6 +280,12 @@ const styles = StyleSheet.create({
   goalInfo: {
     flex: 1,
   },
+  goalChevron: {
+    color: colors.textMuted,
+    fontSize: 24,
+    marginLeft: spacing.sm,
+  },
+  
   goalTitle: {
     color: colors.text,
     fontSize: typography.body.fontSize,

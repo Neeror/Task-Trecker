@@ -8,6 +8,7 @@ import {
   type ProgressResult,
 } from '@/logic/progress';
 import { getGoalsByPeriod } from '@/storage/goalsRepo';
+import { getStepsByPeriod } from '@/storage/goalStepsRepo';
 import { getSummariesInRange } from '@/storage/summariesRepo';
 import { getTasksInRange } from '@/storage/tasksRepo';
 import type { GoalPeriod } from '@/types';
@@ -44,10 +45,11 @@ export function usePeriodProgress(period: GoalPeriod, periodKey: string) {
       const { from, to } =
         period === 'month' ? monthRange(periodKey) : yearRange(periodKey);
 
-      const [tasks, summaries, goals] = await Promise.all([
+       const [tasks, summaries, goals, steps] = await Promise.all([
         getTasksInRange(from, to),
         getSummariesInRange(from, to),
         getGoalsByPeriod(period, periodKey),
+        getStepsByPeriod(period, periodKey),
       ]);
 
       if (!mountedRef.current) return;
@@ -55,7 +57,7 @@ export function usePeriodProgress(period: GoalPeriod, periodKey: string) {
       setState({
         progress: calcProgress(tasks),
         avgDailyPercent: averagePercent(summaries),
-        goals: goals.map((goal) => calcGoalProgress(goal, tasks)),
+        goals: goals.map((goal) => calcGoalProgress(goal, tasks, steps)),
         loading: false,
         error: null,
       });

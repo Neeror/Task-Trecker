@@ -15,6 +15,7 @@ type GoalRow = {
   period: string;
   period_key: string;
   target_count: number;
+  manual_percent: number | null;
   created_at: number;
 };
 
@@ -25,28 +26,49 @@ function rowToGoal(row: GoalRow): Goal | null {
     period: row.period,
     periodKey: row.period_key,
     targetCount: row.target_count,
+    manualPercent: row.manual_percent ?? null,
     createdAt: row.created_at,
   });
 }
 
+
 export async function createGoal(input: NewGoalInput): Promise<Goal> {
   const parsed = NewGoalInputSchema.parse(input);
-  const goal: Goal = {
+    const goal: Goal = {
     id: Crypto.randomUUID(),
     title: parsed.title,
     period: parsed.period,
     periodKey: parsed.periodKey,
     targetCount: parsed.targetCount,
+    manualPercent: null,
     createdAt: Date.now(),
   };
 
   const db = await getDatabase();
   await db.runAsync(
-    `INSERT INTO goals (id, title, period, period_key, target_count, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [goal.id, goal.title, goal.period, goal.periodKey, goal.targetCount, goal.createdAt],
+    `INSERT INTO goals (id, title, period, period_key, target_count, manual_percent, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [goal.id, goal.title, goal.period, goal.periodKey, goal.targetCount, goal.manualPercent, goal.createdAt],
   );
   return goal;
+}
+
+export async function setGoalManualPercent(
+  id: string,
+  percent: number | null,
+): Promise<boolean> {
+  if (
+    percent !== null &&
+    (!Number.isInteger(percent) || percent < 0 || percent > 100)
+  ) {
+    return false;
+  }
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    'UPDATE goals SET manual_percent = ? WHERE id = ?',
+    [percent, id],
+  );
+  return result.changes > 0;
 }
 
 export async function getGoalsByPeriod(

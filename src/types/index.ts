@@ -37,12 +37,22 @@ export const TaskSchema = z.object({
 
 export const GoalPeriodSchema = z.enum(['month', 'year']);
 
+
 export const GoalSchema = z.object({
   id: IdSchema,
   title: UserTextSchema,
   period: GoalPeriodSchema,
   periodKey: z.string().regex(/^\d{4}(-\d{2})?$/, 'Некоректний період'),
   targetCount: z.number().int().min(1).max(10_000),
+  manualPercent: z.number().int().min(0).max(100).nullable(),
+  createdAt: z.number().int().positive(),
+});
+
+export const GoalStepSchema = z.object({
+  id: IdSchema,
+  goalId: IdSchema,
+  title: UserTextSchema,
+  done: z.boolean(),
   createdAt: z.number().int().positive(),
 });
 
@@ -62,6 +72,7 @@ export type DateString = z.infer<typeof DateStringSchema>;
 export type Task = z.infer<typeof TaskSchema>;
 export type Goal = z.infer<typeof GoalSchema>;
 export type GoalPeriod = z.infer<typeof GoalPeriodSchema>;
+export type GoalStep = z.infer<typeof GoalStepSchema>;
 export type DailySummary = z.infer<typeof DailySummarySchema>;
 
 export const NewTaskInputSchema = z.object({
@@ -78,6 +89,13 @@ export const NewGoalInputSchema = z.object({
   targetCount: z.number().int().min(1).max(10_000),
 });
 export type NewGoalInput = z.infer<typeof NewGoalInputSchema>;
+
+export const NewGoalStepInputSchema = z.object({
+  goalId: IdSchema,
+  title: UserTextSchema,
+});
+export type NewGoalStepInput = z.infer<typeof NewGoalStepInputSchema>;
+
 
 export function safeParse<T>(schema: z.ZodType<T>, data: unknown): T | null {
   const result = schema.safeParse(data);

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GoalDetailModal } from '@/components/GoalDetailModal';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { StatsCard } from '@/components/StatsCard';
 import { usePeriodProgress } from '@/hooks/useProgress';
 import { currentMonthKey, currentYearKey } from '@/logic/dates';
 import type { GoalProgressResult } from '@/logic/progress';
 import { colors, percentColor, radius, spacing, typography } from '@/theme/colors';
-import type { GoalPeriod } from '@/types';
+import type { Goal, GoalPeriod } from '@/types';
 
 const STATUS_LABELS: Record<GoalProgressResult['status'], string> = {
   underachieved: 'недовиконано',
@@ -14,11 +15,23 @@ const STATUS_LABELS: Record<GoalProgressResult['status'], string> = {
   overachieved: 'перевиконано',
 };
 
+function goalMetaText(g: GoalProgressResult): string {
+  if (g.source === 'steps') {
+    return `${g.done} з ${g.target} підцілей · ${STATUS_LABELS[g.status]}`;
+  }
+  if (g.source === 'manual') {
+    return `оцінка вручну · ${STATUS_LABELS[g.status]}`;
+  }
+  return `${g.done} з ${g.target} · ${STATUS_LABELS[g.status]}`;
+}
+
 export default function StatsScreen() {
   const [period, setPeriod] = useState<GoalPeriod>('month');
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const periodKey = period === 'month' ? currentMonthKey() : currentYearKey();
-  const { progress, avgDailyPercent, goals, loading, error } =
+  const { progress, avgDailyPercent, goals, loading, error, refresh } =
     usePeriodProgress(period, periodKey);
+
 
   return (
     <ScrollView
@@ -77,26 +90,38 @@ export default function StatsScreen() {
               Цілей на цей період немає. Додай їх на екрані «Цілі».
             </Text>
           ) : (
-            goals.map((g) => (
-              <View key={g.goal.id} style={styles.goalRow}>
+          goals.map((g) => (
+              <Pressable
+                key={g.goal.id}
+                style={styles.goalRow}
+                onPress={() => setSelectedGoal(g.goal)}
+                accessibilityRole="button"
+                accessibilityLabel={g.goal.title}
+                accessibilityHint="Натисніть, щоб керувати прогресом цілі."
+              >
                 <View style={styles.goalInfo}>
                   <Text style={styles.goalTitle} numberOfLines={1}>
                     {g.goal.title}
                   </Text>
-                  <Text style={styles.goalMeta}>
-                    {g.done} з {g.target} · {STATUS_LABELS[g.status]}
-                  </Text>
+                  <Text style={styles.goalMeta}>{goalMetaText(g)}</Text>
                 </View>
                 <Text
                   style={[styles.goalPercent, { color: percentColor(Math.min(g.percent, 100)) }]}
                 >
                   {g.percent}%
                 </Text>
-              </View>
+              </Pressable>
             ))
           )}
         </>
       )}
+
+      <GoalDetailModal
+        goal={selectedGoal}
+        visible={selectedGoal !== null}
+        onClose={() => setSelectedGoal(null)}
+        onChanged={() => void refresh()}
+      />
     </ScrollView>
   );
 }
