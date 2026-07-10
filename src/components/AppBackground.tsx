@@ -6,7 +6,6 @@ import { colors } from '@/theme/colors';
 export function AppBackground({ children }: { children: ReactNode }) {
   const { settings, loading } = useBackground();
 
-  // Поки налаштування вантажаться або фото не встановлене — стандартний фон.
   if (loading || settings.imageUri === null) {
     return <View style={styles.solid}>{children}</View>;
   }
@@ -16,8 +15,6 @@ export function AppBackground({ children }: { children: ReactNode }) {
       source={{ uri: settings.imageUri }}
       style={styles.image}
       resizeMode="cover"
-      // Якщо файл раптом пошкоджений/видалений — просто показуємо фон-колір,
-      // застосунок не падає.
       onError={() => undefined}
     >
       <View

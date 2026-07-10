@@ -22,11 +22,11 @@ interface BackgroundContextValue {
   settings: BackgroundSettings;
   loading: boolean;
   error: string | null;
-  /** Відкриває галерею, валідує та зберігає фото як фон. */
+  
   pickBackground: () => Promise<void>;
-  /** Повертає стандартний фон і видаляє збережений файл. */
+ 
   resetBackground: () => Promise<void>;
-  /** Змінює рівень затемнення (0..0.9). */
+  
   setDimOpacity: (value: number) => Promise<void>;
   clearError: () => void;
 }
@@ -57,8 +57,6 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
   const pickBackground = useCallback(async () => {
     setError(null);
     try {
-      // Запит доступу лише до фото; на iOS 14+ користувач може дати
-      // обмежений доступ до окремих фото — цього достатньо.
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         setError('Немає доступу до галереї. Дозвольте доступ у налаштуваннях.');
@@ -69,7 +67,7 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
         mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.85,
-        exif: false, // не читаємо метадані (геолокацію тощо) — приватність
+        exif: false, 
       });
 
       if (result.canceled) return;
@@ -81,8 +79,6 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
 
       const savedUri = await saveBackgroundImage(asset.uri);
 
-      // Спершу зберігаємо нові налаштування, потім точково прибираємо
-      // попередній файл, щоб у разі збою не лишитися без фону взагалі.
       const previousUri = settings.imageUri;
       const next: BackgroundSettings = { ...settings, imageUri: savedUri };
       await persistBackgroundSettings(next);
@@ -110,7 +106,6 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
 
   const setDimOpacity = useCallback(
     async (value: number) => {
-      // Затискаємо значення в безпечний діапазон незалежно від джерела.
       const clamped = Math.min(0.9, Math.max(0, value));
       try {
         const next: BackgroundSettings = { ...settings, dimOpacity: clamped };
