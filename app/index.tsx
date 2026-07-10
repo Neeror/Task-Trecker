@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AddTaskModal } from '@/components/AddTaskModal';
+import { BackgroundSettingsModal } from '@/components/BackgroundSettingsModal';
 import { TaskList } from '@/components/TaskList';
 import { useTasks } from '@/hooks/useTasks';
 import { formatDateForDisplay, today } from '@/logic/dates';
@@ -13,6 +14,7 @@ export default function TodayScreen() {
   const date = today();
   const { tasks, loading, error, addTask, toggleTask, removeTask } = useTasks(date);
   const [modalVisible, setModalVisible] = useState(false);
+  const [bgModalVisible, setBgModalVisible] = useState(false);
 
   const { done, total } = calcProgress(tasks);
 
@@ -21,7 +23,17 @@ export default function TodayScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.date}>{formatDateForDisplay(date)}</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.date}>{formatDateForDisplay(date)}</Text>
+          <Pressable
+            style={styles.bgButton}
+            onPress={() => setBgModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Налаштувати фон застосунку"
+          >
+            <Text style={styles.bgButtonText}>Фон</Text>
+          </Pressable>
+        </View>
         <Text style={styles.counter}>
           {total > 0 ? `Виконано ${done} з ${total}` : 'Постав цілі на день'}
         </Text>
@@ -66,6 +78,11 @@ export default function TodayScreen() {
         onClose={() => setModalVisible(false)}
         onSubmit={handleAdd}
       />
+
+      <BackgroundSettingsModal
+        visible={bgModalVisible}
+        onClose={() => setBgModalVisible(false)}
+      />
     </View>
   );
 }
@@ -73,11 +90,28 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     padding: spacing.md,
   },
   header: {
     marginBottom: spacing.md,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bgButton: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bgButtonText: {
+    color: colors.textMuted,
+    fontSize: typography.caption.fontSize,
   },
   date: {
     fontSize: typography.title.fontSize,
