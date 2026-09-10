@@ -1,6 +1,6 @@
 {
   "name": "task-tracker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "expo-router/entry",
   "private": true,
   "scripts": {
@@ -11,18 +11,26 @@
     "typecheck": "tsc --noEmit",
     "test": "jest"
   },
+  "jest": {
+    "preset": "jest-expo",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  },
   "dependencies": {
+    "@maplibre/maplibre-react-native": "^10.2.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "babel-preset-expo": "~57.0.0",
     "expo": "^57.0.2",
     "expo-constants": "~57.0.3",
     "expo-crypto": "~57.0.0",
-    "expo-file-system": "~57.0.0",
-    "expo-image-picker": "~57.0.2",
+    "expo-keep-awake": "~57.0.0",
     "expo-linking": "~57.0.1",
+    "expo-location": "~57.0.0",
     "expo-router": "~57.0.3",
     "expo-sqlite": "~57.0.0",
     "expo-status-bar": "~57.0.0",
+    "expo-task-manager": "~57.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-native": "0.86.0",

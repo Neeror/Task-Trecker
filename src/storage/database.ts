@@ -49,23 +49,77 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_goals_period ON goals (period, period_key);
       `);
     }
-     if (currentVersion < 2) {
-      await tx.execAsync(`
-        ALTER TABLE goals ADD COLUMN manual_percent INTEGER
-          CHECK (manual_percent IS NULL OR manual_percent BETWEEN 0 AND 100);
 
-        CREATE TABLE IF NOT EXISTS goal_steps (
+    if (currentVersion < 2) {
+      // Пробіжка — це не окрема сутність поруч із задачами, а ЇХ ПІДТИП.
+      // Тому 'kind' живе в tasks: увесь наявний код прогресу, цілей і
+      // підсумків дня продовжує працювати без жодної зміни.
+      //
+      // Свідомо без CHECK у ALTER TABLE: поведінка CHECK в ADD COLUMN
+      // залежить від версії SQLite на девайсі, а зламана міграція = зламана
+      // апка. Інваріант тримає zod у шарі types + repo.
+      const taskColumns = await tx.getAllAsync<{ name: string }>(
+        "SELECT name FROM pragma_table_info('tasks')",
+      );
+      const hasColumn = (name: string): boolean =>
+        taskColumns.some((c) => c.name === name);
+
+      if (!hasColumn('kind')) {
+        await tx.execAsync(
+          "ALTER TABLE tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'task'",
+        );
+      }
+      if (!hasColumn('target_distance_m')) {
+        await tx.execAsync(
+          'ALTER TABLE tasks ADD COLUMN target_distance_m REAL',
+        );
+      }
+
+      await tx.execAsync(`
+        CREATE TABLE IF NOT EXISTS runs (
           id TEXT PRIMARY KEY NOT NULL,
-          goal_id TEXT NOT NULL,
-          title TEXT NOT NULL,
-          done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1)),
-          created_at INTEGER NOT NULL,
-          FOREIGN KEY (goal_id) REFERENCES goals (id) ON DELETE CASCADE
+          task_id TEXT,
+          date TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'finished')),
+          started_at INTEGER NOT NULL,
+          ended_at INTEGER,
+          paused_at INTEGER,
+          paused_ms INTEGER NOT NULL DEFAULT 0 CHECK (paused_ms >= 0),
+          moving_ms INTEGER NOT NULL DEFAULT 0 CHECK (moving_ms >= 0),
+          distance_m REAL NOT NULL DEFAULT 0 CHECK (distance_m >= 0),
+          ascent_m REAL NOT NULL DEFAULT 0 CHECK (ascent_m >= 0),
+          target_distance_m REAL,
+          CHECK (ended_at IS NULL OR ended_at >= started_at),
+          FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL
         );
 
-        CREATE INDEX IF NOT EXISTS idx_goal_steps_goal_id ON goal_steps (goal_id);
+        -- Сирі точки, а не лише підсумок: метрики завжди можна перерахувати
+        -- новою (кращою) формулою, а маршрут — намалювати.
+        CREATE TABLE IF NOT EXISTS run_points (
+          run_id TEXT NOT NULL,
+          seq INTEGER NOT NULL,
+          lat REAL NOT NULL CHECK (lat BETWEEN -90 AND 90),
+          lon REAL NOT NULL CHECK (lon BETWEEN -180 AND 180),
+          altitude REAL,
+          accuracy REAL,
+          speed REAL,
+          recorded_at INTEGER NOT NULL,
+          PRIMARY KEY (run_id, seq),
+          FOREIGN KEY (run_id) REFERENCES runs (id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_runs_date ON runs (date);
+        CREATE INDEX IF NOT EXISTS idx_runs_task ON runs (task_id);
+        CREATE INDEX IF NOT EXISTS idx_run_points_time
+          ON run_points (run_id, recorded_at);
+
+        -- Головний інваріант фічі, на рівні БД: жодного разу не може бути
+        -- двох незавершених пробіжок одночасно.
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_runs_single_live
+          ON runs (status) WHERE status IN ('active', 'paused');
       `);
     }
+
     await tx.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   });
 }

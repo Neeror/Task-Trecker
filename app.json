@@ -2,7 +2,7 @@
   "expo": {
     "name": "Task Tracker",
     "slug": "task-tracker",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "tasktracker",
@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.myroslav.tasktracker"
+      "bundleIdentifier": "com.myroslav.tasktracker",
+      "infoPlist": {
+        "UIBackgroundModes": ["location"]
+      }
     },
     "android": {
       "package": "com.myroslav.tasktracker",
@@ -18,25 +21,35 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F1115"
-      }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-sqlite",
       [
-        "expo-image-picker",
+        "expo-location",
         {
-          "photosPermission": "Застосунок використовує ваші фото лише для встановлення фону.",
-          "cameraPermission": false,
-          "microphonePermission": false
+          "locationAlwaysAndWhenInUsePermission": "Потрібна геолокація, щоб записувати маршрут пробіжки навіть із заблокованим екраном. Дані залишаються на телефоні.",
+          "locationWhenInUsePermission": "Потрібна геолокація, щоб рахувати дистанцію та темп пробіжки.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {},
+      "mapStyleUrl": "https://tiles.openfreemap.org/styles/liberty",
       "eas": {
         "projectId": "1ff9ae1f-b707-4475-80fe-69c9aceeb14e"
       }
