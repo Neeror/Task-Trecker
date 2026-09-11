@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useRouter } from 'expo-router';
-import { RouteSvg } from '@/components/RouteSvg';
+import { RunMap } from '@/components/RunMap';
 import { useLiveRun } from '@/hooks/useLiveRun';
 import { formatDistance, formatDuration, formatPace } from '@/logic/geo';
 import {
@@ -19,8 +19,8 @@ import {
   pauseCurrentRun,
   resumeCurrentRun,
   syncTracking,
+  type TrackingMode,
 } from '@/tracking/runController';
-import { hasBackgroundPermission } from '@/tracking/permissions';
 import { colors, radius, spacing, typography } from '@/theme/colors';
 
 export default function ActiveRunScreen() {
@@ -30,18 +30,27 @@ export default function ActiveRunScreen() {
   const { run, points, loading, elapsed, pace, distanceM, remaining, goalMet } =
     useLiveRun();
   const [busy, setBusy] = useState(false);
-  const [backgroundOk, setBackgroundOk] = useState(true);
+  const [mode, setMode] = useState<TrackingMode>('off');
   const leftRef = useRef(false);
 
   // ОС могла прибити foreground service, поки апка була у фоні.
   // Джерело істини — БД, тому просто зводимо GPS до її стану.
   useEffect(() => {
-    void syncTracking();
-    void hasBackgroundPermission().then(setBackgroundOk);
+    let alive = true;
+    const sync = () => {
+      void syncTracking().then((next) => {
+        if (alive) setMode(next);
+      });
+    };
+
+    sync();
     const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active') void syncTracking();
+      if (next === 'active') sync();
     });
-    return () => subscription.remove();
+    return () => {
+      alive = false;
+      subscription.remove();
+    };
   }, []);
 
   // Пробіжки більше немає (завершили з іншого місця) — не тримаємо мертвий екран.
@@ -66,6 +75,7 @@ export default function ActiveRunScreen() {
     setBusy(true);
     if (paused) await resumeCurrentRun(run.id);
     else await pauseCurrentRun(run.id);
+    setMode(await syncTracking());
     setBusy(false);
   };
 
@@ -105,9 +115,10 @@ export default function ActiveRunScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {!backgroundOk ? (
+      {mode === 'foreground' ? (
         <Text style={styles.warning}>
-          Дозволу на фонову геолокацію немає — не гаси екран, інакше трек порветься.
+          Трек пишеться, лише поки апка відкрита — не гаси екран, інакше він
+          порветься. Щоб писати у фоні, дай дозвіл «Завжди» в налаштуваннях.
         </Text>
       ) : null}
 
@@ -137,9 +148,10 @@ export default function ActiveRunScreen() {
         </View>
       </View>
 
-      <RouteSvg
+      <RunMap
         points={points}
         height={260}
+        follow
         emptyHint={
           paused
             ? 'Пауза. GPS вимкнено, щоб не садити батарею.'

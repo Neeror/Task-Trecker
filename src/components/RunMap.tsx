@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FC } from 'react';
+import type { FC } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MAP_STYLE_URL } from '@/config/map';
 import { boundsOf, buildSegments } from '@/logic/runMetrics';
@@ -11,15 +11,17 @@ type Props = {
   points: readonly RunPoint[];
   height: number;
   emptyHint: string;
+  /** Live-режим: камера їде за треком, а не застигає на першому кадрі. */
+  follow?: boolean;
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MapLibre = {
-  MapView: FC<Props>;
-  Camera: FC<Props>;
-  ShapeSource: FC<Props>;
-  LineLayer: FC<Props>;
-  CircleLayer: FC<Props>;
+  MapView: FC<any>;
+  Camera: FC<any>;
+  ShapeSource: FC<any>;
+  LineLayer: FC<any>;
+  CircleLayer: FC<any>;
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -49,7 +51,7 @@ function loadMapLibre(): MapLibre | null {
 
 const maplibre = loadMapLibre();
 
-export function RunMap({ points, height, emptyHint }: Props) {
+export function RunMap({ points, height, emptyHint, follow = false }: Props) {
   const geo = useMemo(() => {
     const segments = buildSegments(points).filter((s) => s.length > 1);
     const bounds = boundsOf(points);
@@ -103,68 +105,72 @@ export function RunMap({ points, height, emptyHint }: Props) {
     };
   }, [points]);
 
-  if (maplibre === null || geo.bounds === null || geo.route.features.length === 0) {
+  const { bounds } = geo;
+
+  // Немає нативної карти або ще немає що малювати — деградуємо до SVG.
+  if (maplibre === null || bounds === null || geo.route.features.length === 0) {
     return <RouteSvg points={points} height={height} emptyHint={emptyHint} />;
   }
 
-  const { MapView, Camera, ShapeSource, LineLayer, CircleLayer } = maplibre as any;
-  const { bounds } = geo;
+  const { MapView, Camera, ShapeSource, LineLayer, CircleLayer } = maplibre;
+
+  const cameraBounds = {
+    ne: [bounds.maxLon, bounds.maxLat],
+    sw: [bounds.minLon, bounds.minLat],
+    paddingTop: 32,
+    paddingBottom: 32,
+    paddingLeft: 32,
+    paddingRight: 32,
+  };
 
   return (
-  <View style={[styles.wrapper, { height }]}>
-    <MapView
-      style={StyleSheet.absoluteFill}
-      mapStyle={MAP_STYLE_URL}
-      logoEnabled={false}
-      attributionEnabled
-      compassEnabled={false}
-      rotateEnabled={false}
-      pitchEnabled={false}
-    >
-      <Camera
-        defaultSettings={{
-          bounds: {
-            ne: [bounds.maxLon, bounds.maxLat],
-            sw: [bounds.minLon, bounds.minLat],
-            paddingTop: 32,
-            paddingBottom: 32,
-            paddingLeft: 32,
-            paddingRight: 32,
-          },
-        }}
-        animationDuration={0}
-      />
-      <ShapeSource id="run-route" shape={geo.route}>
-        <LineLayer
-          id="run-route-line"
-          style={{
-            lineColor: colors.primary,
-            lineWidth: 5,
-            lineCap: 'round',
-            lineJoin: 'round',
-          }}
-        />
-      </ShapeSource>
-      <ShapeSource id="run-markers" shape={geo.markers}>
-        <CircleLayer
-          id="run-markers-circle"
-          style={{
-            circleRadius: 6,
-            circleStrokeWidth: 3,
-            circleStrokeColor: colors.background,
-            circleColor: [
-              'match',
-              ['get', 'role'],
-              'start',
-              colors.success,
-              colors.danger,
-            ],
-          }}
-        />
-      </ShapeSource>
-    </MapView>
-  </View>
-) as any;
+    <View style={[styles.wrapper, { height }]}>
+      <MapView
+        style={StyleSheet.absoluteFill}
+        mapStyle={MAP_STYLE_URL}
+        logoEnabled={false}
+        attributionEnabled
+        compassEnabled={false}
+        rotateEnabled={false}
+        pitchEnabled={false}
+      >
+        {follow ? (
+          // Трек росте на очах: тримаємо його в кадрі.
+          <Camera bounds={cameraBounds} animationDuration={600} />
+        ) : (
+          <Camera defaultSettings={{ bounds: cameraBounds }} animationDuration={0} />
+        )}
+        <ShapeSource id="run-route" shape={geo.route}>
+          <LineLayer
+            id="run-route-line"
+            style={{
+              lineColor: colors.primary,
+              lineWidth: 5,
+              lineCap: 'round',
+              lineJoin: 'round',
+            }}
+          />
+        </ShapeSource>
+        <ShapeSource id="run-markers" shape={geo.markers}>
+          <CircleLayer
+            id="run-markers-circle"
+            style={{
+              circleRadius: 6,
+              circleStrokeWidth: 3,
+              circleStrokeColor: colors.background,
+              circleColor: [
+                'match',
+                ['get', 'role'],
+                'start',
+                colors.success,
+                colors.danger,
+              ],
+            }}
+          />
+        </ShapeSource>
+      </MapView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
