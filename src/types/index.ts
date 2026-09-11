@@ -62,6 +62,7 @@ export const GoalSchema = z.object({
   period: GoalPeriodSchema,
   periodKey: z.string().regex(/^\d{4}(-\d{2})?$/, 'Некоректний період'),
   targetCount: z.number().int().min(1).max(10_000),
+  manualPercent: z.number().int().min(0).max(100).nullable(),
   createdAt: TimestampSchema,
 });
 
@@ -112,6 +113,21 @@ export const NewGoalInputSchema = z.object({
   periodKey: z.string().regex(/^\d{4}(-\d{2})?$/),
   targetCount: z.number().int().min(1).max(10_000),
 });
+export const GoalStepSchema = z.object({
+  id: IdSchema,
+  goalId: IdSchema,
+  title: UserTextSchema,
+  done: z.boolean(),
+  createdAt: TimestampSchema,
+});
+export type GoalStep = z.infer<typeof GoalStepSchema>;
+
+export const NewGoalStepInputSchema = z.object({
+  goalId: IdSchema,
+  title: UserTextSchema,
+});
+export type NewGoalStepInput = z.infer<typeof NewGoalStepInputSchema>;
+
 export type NewGoalInput = z.infer<typeof NewGoalInputSchema>;
 
 /* ─────────────── Пробіжки ─────────────── */

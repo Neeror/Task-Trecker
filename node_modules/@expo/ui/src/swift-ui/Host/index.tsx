@@ -1,6 +1,9 @@
 import { requireNativeView } from 'expo';
+import type { Ref } from 'react';
 import { I18nManager, type ColorValue, type StyleProp, type ViewStyle } from 'react-native';
 
+import { TextInputHostProvider, useTextInputHostRef } from '../../keyboard';
+import { useMergeRefs } from '../../utils/useMergeRefs';
 import { createViewModifierEventListener } from '../modifiers/utils';
 import { type CommonViewModifierProps } from '../types';
 
@@ -44,19 +47,26 @@ export interface HostProps extends CommonViewModifierProps {
   layoutDirection?: 'leftToRight' | 'rightToLeft';
 
   /**
-   * Controls which safe area regions the SwiftUI hosting view should ignore. Can only be set once on mount.
-   * - `'all'`- ignores all safe area insets.
+   * Controls which safe area regions the SwiftUI hosting view should ignore.
+   * - `'all'` - ignores all safe area insets, including the keyboard.
+   * - `'container'` - ignores only the container safe area (notch, home indicator, status and navigation bars). The keyboard safe area still applies.
    * - `'keyboard'` - ignores only the keyboard safe area.
    */
-  ignoreSafeArea?: 'all' | 'keyboard';
+  ignoreSafeArea?: 'all' | 'container' | 'keyboard';
 
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   pointerEvents?: 'box-none' | 'none' | 'box-only' | 'auto';
+  /** @hidden */
+  ref?: Ref<any>;
 }
 
 const HostNativeView: React.ComponentType<
-  HostProps & { matchContentsVertical?: boolean; matchContentsHorizontal?: boolean }
+  HostProps & {
+    matchContentsVertical?: boolean;
+    matchContentsHorizontal?: boolean;
+    ref?: Ref<any>;
+  }
 > = requireNativeView('ExpoUI', 'HostView');
 
 /**
@@ -70,26 +80,32 @@ export function Host(props: HostProps) {
     modifiers,
     layoutDirection,
     seedColor,
+    ref,
     ...restProps
   } = props;
+  const hostRef = useTextInputHostRef();
+  const mergedRef = useMergeRefs(ref, hostRef);
 
   return (
-    <HostNativeView
-      modifiers={modifiers}
-      {...(modifiers ? createViewModifierEventListener(modifiers) : undefined)}
-      matchContentsVertical={
-        typeof matchContents === 'object' ? matchContents.vertical : matchContents
-      }
-      matchContentsHorizontal={
-        typeof matchContents === 'object' ? matchContents.horizontal : matchContents
-      }
-      onLayoutContent={onLayoutContent}
-      layoutDirection={
-        layoutDirection ?? (I18nManager.getConstants().isRTL ? 'rightToLeft' : 'leftToRight')
-      }
-      ignoreSafeArea={ignoreSafeArea}
-      seedColor={seedColor}
-      {...restProps}
-    />
+    <TextInputHostProvider hostRef={hostRef}>
+      <HostNativeView
+        modifiers={modifiers}
+        {...(modifiers ? createViewModifierEventListener(modifiers) : undefined)}
+        matchContentsVertical={
+          typeof matchContents === 'object' ? matchContents.vertical : matchContents
+        }
+        matchContentsHorizontal={
+          typeof matchContents === 'object' ? matchContents.horizontal : matchContents
+        }
+        onLayoutContent={onLayoutContent}
+        layoutDirection={
+          layoutDirection ?? (I18nManager.getConstants().isRTL ? 'rightToLeft' : 'leftToRight')
+        }
+        ignoreSafeArea={ignoreSafeArea}
+        seedColor={seedColor}
+        {...restProps}
+        ref={mergedRef}
+      />
+    </TextInputHostProvider>
   );
 }
