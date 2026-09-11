@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 const DB_NAME = 'tasktracker.db';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -119,6 +119,27 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
           ON runs (status) WHERE status IN ('active', 'paused');
       `);
     }
+    if (currentVersion < 3) {
+  const goalColumns = await tx.getAllAsync<{ name: string }>(
+    "SELECT name FROM pragma_table_info('goals')",
+  );
+  if (!goalColumns.some((c) => c.name === 'manual_percent')) {
+    await tx.execAsync('ALTER TABLE goals ADD COLUMN manual_percent INTEGER');
+  }
+
+  await tx.execAsync(`
+    CREATE TABLE IF NOT EXISTS goal_steps (
+      id TEXT PRIMARY KEY NOT NULL,
+      goal_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1)),
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (goal_id) REFERENCES goals (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_goal_steps_goal ON goal_steps (goal_id);
+  `);
+}
 
     await tx.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   });

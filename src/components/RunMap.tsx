@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { StyleSheet, View, type ComponentType } from 'react-native';
+import { FC } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { MAP_STYLE_URL } from '@/config/map';
 import { boundsOf, buildSegments } from '@/logic/runMetrics';
 import { RouteSvg } from '@/components/RouteSvg';
@@ -14,11 +15,11 @@ type Props = {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MapLibre = {
-  MapView: ComponentType<any>;
-  Camera: ComponentType<any>;
-  ShapeSource: ComponentType<any>;
-  LineLayer: ComponentType<any>;
-  CircleLayer: ComponentType<any>;
+  MapView: FC<Props>;
+  Camera: FC<Props>;
+  ShapeSource: FC<Props>;
+  LineLayer: FC<Props>;
+  CircleLayer: FC<Props>;
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -106,64 +107,64 @@ export function RunMap({ points, height, emptyHint }: Props) {
     return <RouteSvg points={points} height={height} emptyHint={emptyHint} />;
   }
 
-  const { MapView, Camera, ShapeSource, LineLayer, CircleLayer } = maplibre;
+  const { MapView, Camera, ShapeSource, LineLayer, CircleLayer } = maplibre as any;
   const { bounds } = geo;
 
   return (
-    <View style={[styles.wrapper, { height }]}>
-      <MapView
-        style={StyleSheet.absoluteFill}
-        mapStyle={MAP_STYLE_URL}
-        logoEnabled={false}
-        attributionEnabled
-        compassEnabled={false}
-        rotateEnabled={false}
-        pitchEnabled={false}
-      >
-        <Camera
-          defaultSettings={{
-            bounds: {
-              ne: [bounds.maxLon, bounds.maxLat],
-              sw: [bounds.minLon, bounds.minLat],
-              paddingTop: 32,
-              paddingBottom: 32,
-              paddingLeft: 32,
-              paddingRight: 32,
-            },
+  <View style={[styles.wrapper, { height }]}>
+    <MapView
+      style={StyleSheet.absoluteFill}
+      mapStyle={MAP_STYLE_URL}
+      logoEnabled={false}
+      attributionEnabled
+      compassEnabled={false}
+      rotateEnabled={false}
+      pitchEnabled={false}
+    >
+      <Camera
+        defaultSettings={{
+          bounds: {
+            ne: [bounds.maxLon, bounds.maxLat],
+            sw: [bounds.minLon, bounds.minLat],
+            paddingTop: 32,
+            paddingBottom: 32,
+            paddingLeft: 32,
+            paddingRight: 32,
+          },
+        }}
+        animationDuration={0}
+      />
+      <ShapeSource id="run-route" shape={geo.route}>
+        <LineLayer
+          id="run-route-line"
+          style={{
+            lineColor: colors.primary,
+            lineWidth: 5,
+            lineCap: 'round',
+            lineJoin: 'round',
           }}
-          animationDuration={0}
         />
-        <ShapeSource id="run-route" shape={geo.route}>
-          <LineLayer
-            id="run-route-line"
-            style={{
-              lineColor: colors.primary,
-              lineWidth: 5,
-              lineCap: 'round',
-              lineJoin: 'round',
-            }}
-          />
-        </ShapeSource>
-        <ShapeSource id="run-markers" shape={geo.markers}>
-          <CircleLayer
-            id="run-markers-circle"
-            style={{
-              circleRadius: 6,
-              circleStrokeWidth: 3,
-              circleStrokeColor: colors.background,
-              circleColor: [
-                'match',
-                ['get', 'role'],
-                'start',
-                colors.success,
-                colors.danger,
-              ],
-            }}
-          />
-        </ShapeSource>
-      </MapView>
-    </View>
-  );
+      </ShapeSource>
+      <ShapeSource id="run-markers" shape={geo.markers}>
+        <CircleLayer
+          id="run-markers-circle"
+          style={{
+            circleRadius: 6,
+            circleStrokeWidth: 3,
+            circleStrokeColor: colors.background,
+            circleColor: [
+              'match',
+              ['get', 'role'],
+              'start',
+              colors.success,
+              colors.danger,
+            ],
+          }}
+        />
+      </ShapeSource>
+    </MapView>
+  </View>
+) as any;
 }
 
 const styles = StyleSheet.create({
